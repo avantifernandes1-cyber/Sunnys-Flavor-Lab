@@ -73,10 +73,10 @@
 
     .hero h1 { font-family:'Playfair Display',serif; font-size:clamp(1rem,2.5vw,1.3rem); font-weight:400; font-style:italic; color:var(--brown-light); letter-spacing:1px; margin-bottom:6px; }
     .hero h2 { font-family:'Pacifico',cursive; font-size:clamp(2.2rem,5vw,3.2rem); color:var(--coral); text-shadow:2px 2px 0 rgba(44,24,16,0.08); margin-bottom:12px; }
-    .hero p { font-size:1rem; font-weight:600; color:var(--brown-light); max-width:480px; margin:0 auto 20px; line-height:1.7; }
+    .hero p { font-family:'Cormorant Garant',serif; font-size:1.2rem; font-weight:400; font-style:italic; color:var(--brown-light); max-width:480px; margin:0 auto 20px; line-height:1.8; letter-spacing:0.3px; }
     .hero-divider { display:flex; align-items:center; justify-content:center; gap:16px; margin-top:20px; }
     .hero-divider span { display:block; width:60px; height:2px; background:var(--blue-mid); border-radius:2px; }
-    .hero-divider i { font-family:'Playfair Display',serif; font-style:italic; font-size:0.85rem; color:var(--brown-light); white-space:nowrap; }
+    .hero-divider i { font-family:'Playfair Display',serif; font-style:italic; font-size:0.95rem; color:var(--brown-light); white-space:normal; max-width:480px; line-height:1.6; }
 
     /* ── ON DECK (voting) ── */
     .ondeck-outer { background:var(--blue-light); border-top:1px solid var(--blue-mid); border-bottom:1px solid var(--blue-mid); }
@@ -204,12 +204,10 @@
       <div class="sp sp7"></div><div class="sp sp8"></div><div class="sp sp9"></div>
       <div class="sp sp10"></div>
     </div>
-    <h1>Small batch. Made with love.</h1>
     <h2>Sunny's Ice Cream</h2>
-    <p>Named after my dad Sunil, who owned ice cream parlors. Each batch keeps his spirit alive — one scoop at a time.</p>
     <div class="hero-divider">
       <span></span>
-      <i>Handcrafted from scratch · 2-quart batches · Real ingredients</i>
+      <i>Named after Sunil, who gave us the sweetest inheritance a person can leave. Made with love, one batch at a time.</i>
       <span></span>
     </div>
   </section>
@@ -375,6 +373,23 @@
     }
 
     // ── RENDER VAULT ────────────────────────────────────────────
+    // Descriptions are hardcoded here; Supabase is still used for ordering/additions.
+    const VAULT_DESCRIPTIONS = {
+      "Vanilla Bean":                      "A rich and velvety vanilla ice cream steeped with real vanilla bean for a timeless classic with an elevated finish.",
+      "Chocolate Fudge Brownie":           "Deep dark chocolate ice cream layered with ribbons of silky fudge and chunks of fresh-baked brownie for the ultimate chocolate lover's scoop.",
+      "Cookie Butter":                     "A smooth Speculoos-infused ice cream folded with crushed spiced cookies for a warm, caramelized crunch in every bite.",
+      "Peanut Butter Oreo":               "Creamy peanut butter ice cream packed with peanut butter Oreos and swirls of whipped peanut butter frosting.",
+      "Peaches & Cream":                  "Sweet summer peach ice cream finished with ribbons of sweet cream for a light and nostalgic southern-inspired scoop.",
+      "Chocolate Strawberry":             "Bright strawberry ice cream blended with freeze-dried strawberries and finished with a rich dark chocolate ribbon.",
+      "Strawberry Dark Chocolate":        "Bright strawberry ice cream blended with freeze-dried strawberries and finished with a rich dark chocolate ribbon.",
+      "Bourbon Butterscotch Cookie Dough":"A bourbon-kissed vanilla ice cream layered with buttery butterscotch notes and generous bites of homemade cookie dough.",
+      "Pralines & Cream":                 "A rich praline butter ice cream filled with crunchy caramelized pralines for a smooth and nutty southern classic.",
+      "Lemon Blueberry":                  "Bright lemon ice cream swirled with ribbons of homemade blueberry jam for a bold balance of citrus and sweetness.",
+      "Oreo":                             "A creamy cookies-and-cream classic loaded with crushed Oreos folded throughout every scoop.",
+      "S'mores":                          "Toasted marshmallow and graham cracker ice cream layered with dark chocolate fudge, graham crumble, and swirls of marshmallow fluff.",
+      "Cinnamon Roll":                    "A cinnamon roll-soaked ice cream base folded with chunks of fresh cinnamon roll and swirls of sweet icing for a warm, bakery-fresh scoop in every bite.",
+    };
+
     async function loadVault() {
       const grid     = document.getElementById('vault-grid');
       const subtitle = document.getElementById('vault-subtitle');
@@ -387,7 +402,9 @@
         const div = document.createElement('div');
         div.className = 'vault-item';
         if (i % 2 === 1) div.style.borderRight = 'none';
-        div.innerHTML = `<h4>${escHtml(item.name)}</h4><p>${escHtml(item.description || '')}</p>`;
+        // Use hardcoded description if available, fall back to DB value
+        const desc = VAULT_DESCRIPTIONS[item.name] || item.description || '';
+        div.innerHTML = `<h4>${escHtml(item.name)}</h4><p>${escHtml(desc)}</p>`;
         grid.appendChild(div);
       });
 
