@@ -208,12 +208,23 @@
 
     /* ── RESPONSIVE ── */
     @media (max-width: 680px) {
-      nav { padding:0 16px; height:auto; flex-wrap:wrap; padding-top:12px; padding-bottom:12px; gap:10px; }
-      .nav-tabs { flex-wrap:wrap; }
-      .panel { padding:32px 20px 60px; }
+      nav { padding:0 16px; height:auto; flex-wrap:wrap; padding-top:10px; padding-bottom:10px; gap:8px; }
+      .nav-left { width:100%; justify-content:space-between; }
+      .nav-tabs { flex-wrap:wrap; gap:4px; width:100%; }
+      .nav-tab { font-size:0.72rem; padding:7px 12px; flex:1; text-align:center; }
+      .logout-btn { display:none; } /* hide on mobile — use it from a safe context */
+      .panel { padding:24px 16px 60px; }
+      .panel-header { margin-bottom:28px; }
       .deck-grid, .vault-grid { grid-template-columns:1fr; }
       .vault-item { border-right:none; }
-      .flavor-card { padding:32px 24px 28px; }
+      .flavor-card { padding:28px 20px 24px; }
+      .flavor-card-wrapper { max-width:100%; }
+      .flavor-name { font-size:1.8rem; }
+      .action-row-primary { flex-direction:column; }
+      .shuffle-btn, .action-btn { width:100%; justify-content:center; }
+      .add-vault-form { flex-direction:column; }
+      .suggestion-card { flex-direction:column; }
+      .suggestion-actions { flex-wrap:wrap; }
     }
   </style>
 </head>
@@ -234,7 +245,7 @@
         <span class="nav-badge">Admin</span>
       </div>
       <div class="nav-tabs">
-        <button class="nav-tab active" onclick="showPanel('generator')">Generator</button>
+        <button class="nav-tab active" onclick="showPanel('generator')">Flavor Lab</button>
         <button class="nav-tab" onclick="showPanel('ondeck')">On Deck</button>
         <button class="nav-tab" onclick="showPanel('suggestions')">Suggestions <span id="sug-badge"></span></button>
         <button class="nav-tab" onclick="showPanel('vault')">Vault</button>
@@ -246,7 +257,7 @@
     <div class="panel active" id="panel-generator">
       <div class="panel-header">
         <span class="panel-eyebrow">Weekly flavor</span>
-        <h2>Generator</h2>
+        <h2>Flavor Lab</h2>
         <p>Shuffle through the pool. Save to On Deck or mark as made.</p>
       </div>
       <div class="flavor-card-wrapper">
@@ -639,8 +650,22 @@
     }
 
     async function sugAddToDeck(id, name, desc) {
-      const { error } = await db.from('on_deck').insert({ name, vibe: desc || '' });
+      // Try with from_community flag first; fall back if column doesn't exist yet
+      let result = await db.from('on_deck')
+        .insert({ name, vibe: desc || '', from_community: true })
+        .select('id').single();
+      if (result.error) {
+        // Retry without the column (run the Supabase migration below to fix permanently)
+        result = await db.from('on_deck').insert({ name, vibe: desc || '' }).select('id').single();
+      }
+      const { data: newDeck, error } = result;
       if (error) { toast('Error adding to On Deck.'); return; }
+
+      // Auto-seed 1 vote — they submitted it, that counts
+      if (newDeck?.id) {
+        await db.from('votes').insert({ on_deck_id: newDeck.id, voter_token: 'system_community_seed' });
+      }
+
       await db.from('suggestions').update({ status: 'approved' }).eq('id', id);
       toast('Added to On Deck!');
       loadSuggestions();

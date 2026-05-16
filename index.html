@@ -35,7 +35,8 @@
       padding:0 40px; height:64px; display:flex; align-items:center; justify-content:space-between;
       position:sticky; top:0; z-index:200; box-shadow:0 2px 16px rgba(44,24,16,0.08);
     }
-    .nav-brand { font-family:'Pacifico',cursive; color:var(--coral); font-size:1.7rem; text-shadow:1px 1px 0 rgba(44,24,16,0.1); text-decoration:none; cursor:pointer; }
+    .nav-brand { font-family:'Pacifico',cursive; color:var(--coral); font-size:1.7rem; text-shadow:1px 1px 0 rgba(44,24,16,0.1); text-decoration:none; cursor:pointer; line-height:1; }
+    .nav-brand-sub { display:block; font-size:0.62rem; font-weight:800; letter-spacing:2.5px; text-transform:uppercase; color:var(--brown-light); margin-top:2px; }
     .nav-links { display:flex; gap:6px; list-style:none; align-items:center; }
     .nav-links button {
       font-weight:800; font-size:0.8rem; letter-spacing:1.5px; text-transform:uppercase;
@@ -154,6 +155,12 @@
     .vote-btn.voted { background:var(--blue); color:#fff; border-color:var(--blue); cursor:default; }
     .vote-btn.voted:hover { background:var(--blue); }
     .vote-count { font-size:0.85rem; font-weight:700; color:var(--brown-light); }
+    .community-badge {
+      display:inline-flex; align-items:center; gap:5px;
+      font-size:0.72rem; font-weight:800; letter-spacing:0.8px; text-transform:uppercase;
+      color:var(--coral-dark); background:#fdf0eb; border:1.5px solid #f4c4b3;
+      border-radius:100px; padding:4px 11px; margin-bottom:10px;
+    }
     .ondeck-empty {
       grid-column:1/-1; text-align:center; padding:64px 24px;
       font-family:'Playfair Display',serif; font-style:italic; font-size:1.1rem; color:var(--brown-light);
@@ -186,13 +193,24 @@
     .submit-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
 
     @media (max-width:640px) {
-      nav { padding:0 20px; }
+      nav { padding:0 16px; }
+      .nav-brand { font-size:1.4rem; }
+      .nav-links button { font-size:0.72rem; padding:6px 10px; letter-spacing:1px; }
+      .hero { padding:48px 20px 40px; }
+      .logo-stage { width:160px; height:160px; }
+      .logo-stage img { width:160px; height:160px; }
+      .hero h2 { font-size:2rem; }
+      .hero-divider i { font-size:0.88rem; }
       .vault-grid { grid-template-columns:1fr; }
       .vault-item { border-right:none; }
-      .vault-section { padding:52px 20px; }
+      .vault-section { padding:40px 16px 52px; }
+      .vault-header { margin-bottom:36px; }
+      .page-header { padding:40px 20px 32px; }
       .ondeck-grid { grid-template-columns:1fr; }
-      .ondeck-section { padding:52px 20px; }
-      .suggest-section { padding:52px 20px; }
+      .ondeck-section { padding:40px 16px 52px; }
+      .ondeck-card { padding:22px 20px 18px; }
+      .suggest-section { padding:40px 16px 52px; }
+      .submit-btn { width:100%; justify-content:center; }
     }
   </style>
 </head>
@@ -201,7 +219,7 @@
 
   <nav>
     <div class="nav-left">
-      <span class="nav-brand" onclick="switchTab('home')">Sunny's</span>
+      <span class="nav-brand" onclick="switchTab('home')">Sunny's<span class="nav-brand-sub">Flavor Lab</span></span>
     </div>
     <ul class="nav-links">
       <li><button id="tab-btn-home" class="active" onclick="switchTab('home')">Home</button></li>
@@ -399,15 +417,22 @@
       const { data: votes } = await db.from('votes').select('on_deck_id').in('on_deck_id', ids);
       const voteCounts = {};
       (votes || []).forEach(v => { voteCounts[v.on_deck_id] = (voteCounts[v.on_deck_id] || 0) + 1; });
+
+      // Sort most-voted first
+      decks.sort((a, b) => (voteCounts[b.id] || 0) - (voteCounts[a.id] || 0));
+
       const myVotes = getMyVotes();
       grid.innerHTML = '';
       decks.forEach(item => {
         const count = voteCounts[item.id] || 0;
         const voted = myVotes.includes(item.id);
+        // Community pick: flagged via from_community column, or no level/globe (older fallback)
+        const isCommunityPick = item.from_community === true || (!item.level && !item.globe);
         const card  = document.createElement('div');
         card.className = 'ondeck-card';
         card.id        = 'deck-card-' + item.id;
         card.innerHTML = `
+          ${isCommunityPick ? '<div class="community-badge">✦ The crowd asked for it</div>' : ''}
           <h4>${escHtml(item.name)}</h4>
           <div class="ondeck-vibe">${escHtml(item.vibe || '')}</div>
           <div class="vote-row">
@@ -442,6 +467,16 @@
       const next = (parseInt(countEl.textContent) || 0) + 1;
       countEl.textContent = next + ' vote' + (next !== 1 ? 's' : '');
       toast('Vote cast! Thanks 🎉');
+
+      // Re-sort cards by vote count
+      const grid = document.getElementById('ondeck-grid');
+      const cards = [...grid.querySelectorAll('.ondeck-card')];
+      cards.sort((a, b) => {
+        const aCount = parseInt(a.querySelector('.vote-count')?.textContent) || 0;
+        const bCount = parseInt(b.querySelector('.vote-count')?.textContent) || 0;
+        return bCount - aCount;
+      });
+      cards.forEach(c => grid.appendChild(c));
     }
 
     /* ── SUGGEST ── */
