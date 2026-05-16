@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sunny's — Admin Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --cream:       #FAF3E0;
+      --cream-deep:  #F0E6C8;
+      --cream-light: #FDFAF2;
+      --coral:       #E8785A;
+      --coral-dark:  #CD5A3C;
+      --yellow:      #F0B429;
+      --blue:        #5BB8D4;
+      --blue-dark:   #3A96B5;
+      --blue-light:  #D6F0F8;
+      --blue-mid:    #A8DFF0;
+      --brown:       #2C1810;
+      --brown-mid:   #5C3420;
+      --brown-light: #9B6647;
+      --white:       #FDFAF5;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family:'Nunito',sans-serif;
+      background:var(--cream);
+      color:var(--brown);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+
+    .login-card {
+      background:var(--white);
+      border-radius:24px;
+      border-top:5px solid var(--blue);
+      padding:52px 48px 44px;
+      width:100%;
+      max-width:420px;
+      box-shadow:0 8px 40px rgba(44,24,16,0.12);
+      text-align:center;
+    }
+
+    .brand { font-family:'Pacifico',cursive; font-size:2.2rem; color:var(--coral); margin-bottom:4px; }
+    .brand-sub { font-size:0.7rem; font-weight:800; letter-spacing:3px; text-transform:uppercase; color:var(--blue-dark); margin-bottom:32px; display:block; }
+
+    h2 {
+      font-family:'Playfair Display',serif;
+      font-size:1.4rem;
+      font-weight:700;
+      color:var(--brown);
+      margin-bottom:6px;
+    }
+    .subtitle {
+      font-family:'Playfair Display',serif;
+      font-style:italic;
+      font-size:0.9rem;
+      color:var(--brown-light);
+      margin-bottom:32px;
+    }
+
+    .field { margin-bottom:18px; text-align:left; }
+    .field label {
+      display:block;
+      font-size:0.78rem;
+      font-weight:800;
+      letter-spacing:1.5px;
+      text-transform:uppercase;
+      color:var(--brown-mid);
+      margin-bottom:8px;
+    }
+    .field input {
+      width:100%;
+      padding:13px 16px;
+      border-radius:12px;
+      border:2px solid var(--cream-deep);
+      background:var(--cream-light);
+      font-family:'Nunito',sans-serif;
+      font-size:0.95rem;
+      font-weight:600;
+      color:var(--brown);
+      outline:none;
+      transition:border-color 0.2s;
+    }
+    .field input:focus { border-color:var(--blue); }
+
+    .login-btn {
+      width:100%;
+      padding:15px;
+      background:var(--blue);
+      color:#fff;
+      border:none;
+      border-radius:14px;
+      font-family:'Nunito',sans-serif;
+      font-weight:800;
+      font-size:1rem;
+      cursor:pointer;
+      transition:background 0.2s, transform 0.15s;
+      box-shadow:0 4px 18px rgba(58,150,181,0.35);
+      margin-top:8px;
+    }
+    .login-btn:hover { background:var(--blue-dark); transform:translateY(-2px); }
+    .login-btn:active { transform:translateY(0); }
+    .login-btn:disabled { opacity:0.55; cursor:not-allowed; transform:none; }
+
+    .error-msg {
+      background:#fdf0eb;
+      border:1.5px solid #f4c4b3;
+      color:var(--coral-dark);
+      border-radius:10px;
+      padding:10px 14px;
+      font-size:0.85rem;
+      font-weight:700;
+      margin-top:16px;
+      display:none;
+    }
+    .error-msg.show { display:block; }
+
+    .back-link {
+      display:block;
+      margin-top:24px;
+      font-family:'Playfair Display',serif;
+      font-style:italic;
+      font-size:0.88rem;
+      color:var(--brown-light);
+      text-decoration:none;
+      transition:color 0.2s;
+    }
+    .back-link:hover { color:var(--blue-dark); }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="brand">Sunny's</div>
+    <span class="brand-sub">Admin Portal</span>
+
+    <h2>Welcome back</h2>
+    <p class="subtitle">Sign in to manage the flavor studio</p>
+
+    <div class="field">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+
+    <button class="login-btn" id="login-btn" onclick="handleLogin()">Sign In</button>
+    <div class="error-msg" id="error-msg"></div>
+
+    <a class="back-link" href="index.html">← Back to Sunny's</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script>
+    // ── CONFIG (replace with your Supabase project values) ──
+    const SUPABASE_URL      = 'https://https://uyslbeqspeurwqcnbnyh.supabase.co/rest/v1/.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_ANsb_publishable_iJxEgQAhq4xiLh-ipmuOyQ_G5Kh-xp2ON_KEY_HERE';
+
+    const { createClient } = window.supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Redirect if already logged in
+    (async () => {
+      const { data: { session } } = await db.auth.getSession();
+      if (session) window.location.href = 'admin.html';
+    })();
+
+    async function handleLogin() {
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const btn      = document.getElementById('login-btn');
+      const errEl    = document.getElementById('error-msg');
+
+      if (!email || !password) {
+        showError('Please enter your email and password.');
+        return;
+      }
+
+      btn.disabled    = true;
+      btn.textContent = 'Signing in…';
+      errEl.classList.remove('show');
+
+      const { error } = await db.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        showError(error.message || 'Sign in failed. Check your credentials.');
+        btn.disabled    = false;
+        btn.textContent = 'Sign In';
+      } else {
+        window.location.href = 'admin.html';
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+
+    // Allow Enter key to submit
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleLogin();
+    });
+  </script>
+</body>
+</html>
