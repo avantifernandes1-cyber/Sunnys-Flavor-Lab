@@ -264,6 +264,9 @@
               <button class="action-btn made" id="made-btn" onclick="madeThis()" disabled>✓ Made This</button>
               <button class="action-btn save" id="save-btn" onclick="saveThis()" disabled>+ Save to On Deck</button>
             </div>
+            <div style="margin-top:14px;">
+              <button onclick="openPastSuggestions()" style="font-family:'Playfair Display',serif;font-style:italic;font-size:0.88rem;color:var(--brown-light);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--blue-mid);padding:0;transition:color 0.2s;" onmouseover="this.style.color='var(--blue-dark)'" onmouseout="this.style.color='var(--brown-light)'">View past suggestions →</button>
+            </div>
           </div>
         </div>
       </div>
@@ -314,6 +317,21 @@
 
   <!-- TOAST -->
   <div id="toast"></div>
+
+  <!-- PAST SUGGESTIONS MODAL -->
+  <div id="past-sug-modal" onclick="if(event.target===this)closePastSuggestions()" style="display:none;position:fixed;inset:0;background:rgba(44,24,16,0.55);z-index:500;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px);">
+    <div style="background:var(--white);border-radius:24px;border-top:5px solid var(--blue);width:100%;max-width:620px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(44,24,16,0.22);">
+      <div style="padding:26px 32px 18px;border-bottom:1px solid var(--cream-deep);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;">
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--brown);">Past Suggestions</div>
+          <div id="past-sug-count" style="font-size:0.82rem;font-weight:600;color:var(--brown-light);margin-top:3px;"></div>
+          <div style="font-size:0.78rem;font-weight:600;color:var(--brown-light);margin-top:2px;font-style:italic;">Flavors marked "cooling down" won't appear in the generator for 3 weeks.</div>
+        </div>
+        <button onclick="closePastSuggestions()" style="background:var(--cream);border:1.5px solid var(--cream-deep);border-radius:50%;width:34px;height:34px;font-size:1rem;cursor:pointer;color:var(--brown-mid);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:16px;">✕</button>
+      </div>
+      <div id="past-sug-body" style="overflow-y:auto;flex:1;"></div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
@@ -375,7 +393,34 @@
 
     // ── GENERATOR STATE ─────────────────────────────────────────
     let currentIndex = -1;
-    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    const THREE_WEEKS = 21 * 24 * 60 * 60 * 1000;
+
+    // localStorage helpers
+    const getSkipped = () => { try { return JSON.parse(localStorage.getItem('sunnys_skipped') || '[]'); } catch { return []; } };
+    const setSkipped = v  => localStorage.setItem('sunnys_skipped', JSON.stringify(v));
+    const getGenHistory = () => { try { return JSON.parse(localStorage.getItem('sunnys_gen_history') || '[]'); } catch { return []; } };
+    const setGenHistory = v  => localStorage.setItem('sunnys_gen_history', JSON.stringify(v));
+
+    function markSkipped(name) {
+      const skipped = getSkipped().filter(s => s.name !== name); // remove old entry if any
+      skipped.push({ name, ts: Date.now() });
+      setSkipped(skipped);
+    }
+
+    function addToGenHistory(f) {
+      const history = getGenHistory();
+      history.unshift({ name: f.name, vibe: f.vibe, ts: Date.now(),
+        date: new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' }) });
+      setGenHistory(history);
+    }
+
+    // Returns the pool of flavors eligible to be shown (not skipped within 3 weeks)
+    function getAvailablePool() {
+      const cutoff  = Date.now() - THREE_WEEKS;
+      const blocked = new Set(getSkipped().filter(s => s.ts > cutoff).map(s => s.name));
+      const pool    = FLAVORS.filter(f => !blocked.has(f.name));
+      return pool.length > 0 ? pool : FLAVORS; // fallback: show everything if pool exhausted
+    }
 
     function getWeekLabel() {
       const now = new Date();
@@ -404,12 +449,25 @@
     }
 
     function shuffle() {
-      const card = document.getElementById('flavor-card');
-      const btn  = document.getElementById('shuffle-btn');
+      const card    = document.getElementById('flavor-card');
+      const btn     = document.getElementById('shuffle-btn');
+      const madeBtn = document.getElementById('made-btn');
+      const saveBtn = document.getElementById('save-btn');
+
+      // If a flavor is showing and wasn't actioned, mark it as skipped
+      if (currentIndex >= 0 && !madeBtn.disabled && !saveBtn.disabled) {
+        markSkipped(FLAVORS[currentIndex].name);
+      }
+
+      // Pick from the eligible pool
+      const pool = getAvailablePool();
+      const poolIndices = pool.map(f => FLAVORS.indexOf(f));
       let next;
-      do { next = Math.floor(Math.random() * FLAVORS.length); }
-      while (next === currentIndex && FLAVORS.length > 1);
+      do { next = poolIndices[Math.floor(Math.random() * poolIndices.length)]; }
+      while (next === currentIndex && pool.length > 1);
       currentIndex = next;
+
+      addToGenHistory(FLAVORS[currentIndex]);
 
       btn.classList.add('spinning');
       setTimeout(() => btn.classList.remove('spinning'), 400);
@@ -418,6 +476,44 @@
         renderFlavor(FLAVORS[currentIndex]);
         card.classList.remove('fading');
       }, 350);
+    }
+
+    // ── PAST SUGGESTIONS MODAL ──────────────────────────────────
+    function openPastSuggestions() {
+      const history = getGenHistory();
+      const body    = document.getElementById('past-sug-body');
+      const count   = document.getElementById('past-sug-count');
+      body.innerHTML = '';
+      if (history.length === 0) {
+        body.innerHTML = '<div style="padding:40px;text-align:center;font-family:\'Playfair Display\',serif;font-style:italic;color:var(--brown-light);">No suggestions yet — hit Shuffle to begin.</div>';
+        count.textContent = '';
+      } else {
+        count.textContent = history.length + ' idea' + (history.length !== 1 ? 's' : '') + ' generated.';
+        history.forEach(item => {
+          const skipped  = getSkipped();
+          const cutoff   = Date.now() - THREE_WEEKS;
+          const isLocked = skipped.some(s => s.name === item.name && s.ts > cutoff);
+          const row = document.createElement('div');
+          row.style.cssText = 'padding:16px 28px;border-bottom:1px solid var(--cream-deep);display:grid;grid-template-columns:1fr auto;gap:8px 16px;align-items:start;';
+          row.innerHTML = `
+            <div>
+              <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--brown);margin-bottom:2px;">${item.name}</div>
+              <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:0.82rem;color:var(--blue-dark);">${item.vibe}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:0.75rem;font-weight:700;color:var(--brown-light);white-space:nowrap;">${item.date}</div>
+              ${isLocked ? '<div style="font-size:0.7rem;font-weight:800;color:var(--coral);margin-top:3px;letter-spacing:0.5px;">cooling down</div>' : ''}
+            </div>`;
+          body.appendChild(row);
+        });
+      }
+      const modal = document.getElementById('past-sug-modal');
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+    function closePastSuggestions() {
+      document.getElementById('past-sug-modal').style.display = 'none';
+      document.body.style.overflow = '';
     }
 
     async function madeThis() {
