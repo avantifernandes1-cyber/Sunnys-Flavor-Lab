@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sunny's — Update Vault Descriptions</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Nunito', sans-serif; background: #FAF3E0; color: #2C1810; max-width: 640px; margin: 60px auto; padding: 0 24px; }
+    h1 { font-family: 'Playfair Display', serif; color: #E8785A; margin-bottom: 8px; }
+    p { color: #9B6647; margin-bottom: 32px; font-size: 0.95rem; line-height: 1.6; }
+    button {
+      background: #5BB8D4; color: #fff; border: none; border-radius: 14px;
+      padding: 16px 36px; font-family: 'Nunito', sans-serif; font-weight: 800;
+      font-size: 1rem; cursor: pointer; transition: background 0.2s;
+    }
+    button:hover { background: #3A96B5; }
+    button:disabled { background: #A8DFF0; cursor: not-allowed; }
+    #log { margin-top: 32px; background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(44,24,16,0.08); display: none; }
+    .log-row { padding: 8px 0; border-bottom: 1px solid #F0E6C8; font-size: 0.88rem; display: flex; gap: 12px; align-items: flex-start; }
+    .log-row:last-child { border-bottom: none; }
+    .log-row .status { font-weight: 800; min-width: 20px; }
+    .ok   { color: #4CAF82; }
+    .skip { color: #9B6647; }
+    .err  { color: #E8785A; }
+    #done-msg { margin-top: 20px; font-weight: 800; font-size: 1rem; color: #4CAF82; display: none; }
+  </style>
+</head>
+<body>
+  <h1>Vault Description Updater</h1>
+  <p>One-time tool. Click the button to update all vault flavor descriptions in Supabase. Each flavor is matched by name — anything not found is skipped.</p>
+  <button id="run-btn" onclick="runUpdate()">Update All Descriptions</button>
+  <div id="log"></div>
+  <div id="done-msg">✓ All done! You can close this tab.</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script>
+    const SUPABASE_URL      = 'https://uyslbeqspeurwqcnbnyh.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_iJxEgQAhq4xiLh-ipmuOyQ_G5Kh-xp2';
+    const { createClient } = window.supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // New descriptions keyed by the exact name in the database
+    const UPDATES = {
+      "Vanilla Bean":
+        "A rich and velvety vanilla ice cream steeped with real vanilla bean for a timeless classic with an elevated finish.",
+      "Chocolate Fudge Brownie":
+        "Deep dark chocolate ice cream layered with ribbons of silky fudge and chunks of fresh-baked brownie for the ultimate chocolate lover's scoop.",
+      "Cookie Butter":
+        "A smooth Speculoos-infused ice cream folded with crushed spiced cookies for a warm, caramelized crunch in every bite.",
+      "Peanut Butter Oreo":
+        "Creamy peanut butter ice cream packed with peanut butter Oreos and swirls of whipped peanut butter frosting.",
+      "Peaches & Cream":
+        "Sweet summer peach ice cream finished with ribbons of sweet cream for a light and nostalgic southern-inspired scoop.",
+      "Chocolate Strawberry":
+        "Bright strawberry ice cream blended with freeze-dried strawberries and finished with a rich dark chocolate ribbon.",
+      "Strawberry Dark Chocolate":
+        "Bright strawberry ice cream blended with freeze-dried strawberries and finished with a rich dark chocolate ribbon.",
+      "Bourbon Butterscotch Cookie Dough":
+        "A bourbon-kissed vanilla ice cream layered with buttery butterscotch notes and generous bites of homemade cookie dough.",
+      "Pralines & Cream":
+        "A rich praline butter ice cream filled with crunchy caramelized pralines for a smooth and nutty southern classic.",
+      "Lemon Blueberry":
+        "Bright lemon ice cream swirled with ribbons of homemade blueberry jam for a bold balance of citrus and sweetness.",
+      "Oreo":
+        "A creamy cookies-and-cream classic loaded with crushed Oreos folded throughout every scoop.",
+      "S'mores":
+        "Toasted marshmallow and graham cracker ice cream layered with dark chocolate fudge, graham crumble, and swirls of marshmallow fluff.",
+    };
+
+    function log(status, name, msg) {
+      const box = document.getElementById('log');
+      box.style.display = 'block';
+      const row = document.createElement('div');
+      row.className = 'log-row';
+      row.innerHTML = `<span class="status ${status}">${status === 'ok' ? '✓' : status === 'skip' ? '–' : '✕'}</span><span><strong>${name}</strong> — ${msg}</span>`;
+      box.appendChild(row);
+    }
+
+    async function runUpdate() {
+      const btn = document.getElementById('run-btn');
+      btn.disabled = true;
+      btn.textContent = 'Updating…';
+
+      // Fetch all current vault items
+      const { data: items, error: fetchErr } = await db.from('vault').select('id, name');
+      if (fetchErr || !items) {
+        alert('Could not fetch vault items: ' + (fetchErr?.message || 'unknown error'));
+        btn.disabled = false;
+        btn.textContent = 'Update All Descriptions';
+        return;
+      }
+
+      for (const item of items) {
+        const newDesc = UPDATES[item.name];
+        if (!newDesc) {
+          log('skip', item.name, 'no update defined — skipped.');
+          continue;
+        }
+        const { error: updateErr } = await db
+          .from('vault')
+          .update({ description: newDesc })
+          .eq('id', item.id);
+
+        if (updateErr) {
+          log('err', item.name, 'update failed: ' + updateErr.message);
+        } else {
+          log('ok', item.name, 'updated.');
+        }
+      }
+
+      btn.textContent = 'Done!';
+      document.getElementById('done-msg').style.display = 'block';
+    }
+  </script>
+</body>
+</html>
