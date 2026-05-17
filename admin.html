@@ -634,8 +634,7 @@
           </div>
           <div class="suggestion-actions">
             ${sug.status === 'pending' ? `
-              <button class="sug-btn add-deck" onclick="sugAddToDeck('${sug.id}','${escHtml(sug.flavor_name)}','${escHtml(sug.description||'')}')">+ On Deck</button>
-              <button class="sug-btn approve" onclick="sugUpdateStatus('${sug.id}','approved')">Approve</button>
+              <button class="sug-btn approve" onclick="sugAddToDeck('${sug.id}','${escHtml(sug.flavor_name)}','${escHtml(sug.description||'')}')">✓ Approve + On Deck</button>
               <button class="sug-btn reject" onclick="sugUpdateStatus('${sug.id}','rejected')">Reject</button>
             ` : `<span style="font-size:0.78rem;font-weight:700;color:var(--brown-light);text-transform:uppercase;">${sug.status}</span>`}
           </div>`;
